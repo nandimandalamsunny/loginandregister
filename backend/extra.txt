@@ -1,0 +1,27 @@
+  try {
+        let user = await userSchema.findOne({email:req.body.email})
+        if(user){
+          res.send({ statusCode:409, message:"User Already Exists" })
+        }
+        else{
+          let hashedPassword = await hashPassword(req.body.password)
+          const uploadResponse = await cloudinary.uploader.upload(req.body.profile, {upload_preset: 'testing api',})
+          const object = {
+            name:req.body.name,
+            email:req.body.email,
+            password:hashedPassword,
+            profile:uploadResponse.url
+          }
+          const vtoken = await randomString.generate();
+          await userSchema.create(object);
+          const data = await  userSchema.updateOne({email:object.email},{$set:{verificationToken:vtoken}});
+          if(data){
+              registerMail(req.body.name,req.body.email,vtoken)
+              res.send({statusCode:200,message:"Success"})
+           }
+          }
+      }
+      catch (error) {
+       console.log(error)
+       res.send({ statusCode:500,  message:"Error" }) 
+      }
